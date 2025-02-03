@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 
 const urlSchema = z.object({
-    url: z.string().url({ message: "Invalid URL format" }),
+    longUrl: z.string().url({ message: "Invalid URL format" }),
 });
 
 /**
@@ -27,7 +27,7 @@ const UrlForm = (): JSX.Element => {
     const [loading, setLoading] = useState(false);
 
     //FORM
-    const {register, handleSubmit, formState: { errors }} = useForm<{ url: string }>({
+    const {register, handleSubmit, formState: { errors }} = useForm<{ longUrl: string }>({
         resolver: zodResolver(urlSchema),
     });
 
@@ -43,17 +43,22 @@ const UrlForm = (): JSX.Element => {
      * 
      * @returns {Promise<void>} The promise of the request.
     */
-    const onSubmit = async (data: { url: string }): Promise<void> => {
+    const onSubmit = async (data: { longUrl: string }): Promise<void> => {
         setLoading(true);
         setMessage("");
     
         try {
-            const response = await axios.post("/url", data);
+            const response = await axios.post("http://localhost:3005/shorten", data);
 
-            if (response.status === 200) {
-                setMessage("URL sent successfully!");
-            } else {
+            if (response.data.code !== 200) {
                 setMessage("Error sending URL");
+            } else {
+                setMessage("URL sent successfully!");
+                if(response.data.shortenedUrl === null) return;
+                const redictedUrl = await axios.get(`http://localhost:3005/${response.data.shortenedUrl}`);
+                console.log(redictedUrl);
+                
+                window.location.href = redictedUrl.data;
             }
         } catch (error) {
             setMessage("Error: " + (error instanceof Error ? error.message : "Unknown"));
@@ -71,10 +76,10 @@ const UrlForm = (): JSX.Element => {
                 <input
                     type="url"
                     placeholder="https://example.com"
-                    {...register("url")}
+                    {...register("longUrl")}
                     className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-500"
                 />
-                {errors.url && ( <p className="text-red-500 text-sm mt-1">{errors.url.message}</p>)}
+                {errors.longUrl && ( <p className="text-red-500 text-sm mt-1">{errors.longUrl.message}</p>)}
                 </div>
                 <button
                     type="submit"
